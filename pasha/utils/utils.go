@@ -1,6 +1,11 @@
 package utils
 
-import "math/rand"
+import (
+	"math/rand"
+	"strings"
+)
+
+const wanted = "abcdefghijklmnopqrstuvwxyz.,!? "
 
 func MaxChar(m map[rune]int) rune {
 	var res rune
@@ -20,6 +25,13 @@ func IsChar(char rune) bool {
 		return true
 	}
 
+	return false
+}
+
+func IsWanted(char rune) bool {
+	if strings.Contains(wanted, string(char)) {
+		return true
+	}
 	return false
 }
 
@@ -49,4 +61,27 @@ func SelectCharacterWithProbabilities(probabilities map[rune]float64) rune {
 	}
 
 	return 0
+}
+
+func GetNextFromProbabilities(probs map[string]map[rune]float64) rune {
+	maxKey := ""
+	for key, _ := range probs {
+		if len(key) > len(maxKey) {
+			maxKey = key
+		}
+	}
+
+	return SelectCharacterWithProbabilities(probs[maxKey])
+}
+
+func Normalize(probs map[string]map[rune]float64) {
+	for prefix, nextMap := range probs {
+		total := 0.0
+		for _, count := range nextMap {
+			total += count
+		}
+		for next := range nextMap {
+			probs[prefix][next] /= total
+		}
+	}
 }
