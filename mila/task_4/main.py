@@ -1,10 +1,19 @@
+import os
 import random
-import urllib.request
+import urllib.request, urllib.error
 
 ALLOWED_CHARACTERS = 'abcdefghijklmnopqrstuvwxyz '
 
 
 def analyze_text(url):
+    try:
+        urllib.request.urlopen(url)
+    except urllib.error.URLError:
+        raise ValueError("Provided URL is invalid.")
+
+    if not os.path.splitext(url)[1] == ".txt":
+        raise ValueError("Provided URL doesn't point to a .txt file")
+
     with urllib.request.urlopen(url) as response:
         text = response.read().decode('utf-8').lower()
 
@@ -34,7 +43,7 @@ def display(hashmap):
     if len(user_input) == 1 and user_input in ALLOWED_CHARACTERS:
         return generate_text(hashmap, user_input, 200)
     else:
-        return 'Invalid value!'
+        raise ValueError('Invalid value!')
 
 
 def generate_text(hashmap, input, given_length):
@@ -54,6 +63,7 @@ def generate_text(hashmap, input, given_length):
 
     while len(generated) != given_length:
         next_probabilities = hashmap[current_char]
+        print(hashmap[current_char])
         next_char = random.choices(list(next_probabilities.keys()), list(next_probabilities.values()))[0]
 
         hashmap[current_char][next_char] -= 1
@@ -65,7 +75,6 @@ def generate_text(hashmap, input, given_length):
         current_char = next_char
 
     return generated
-
 
 # print(display(analyze_text("http://www.textfiles.com/internet/alt-news.txt")))
 # print(display(analyze_text("http://www.textfiles.com/internet/dummy20.txt")))
