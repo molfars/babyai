@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-const wanted = "abcdefghijklmnopqrstuvwxyz.,!? "
+const validLetters = "abcdefghijklmnopqrstuvwxyz.,!? "
 
 func MaxChar(m map[rune]int) rune {
 	var res rune
@@ -29,7 +29,7 @@ func IsChar(char rune) bool {
 }
 
 func IsWanted(char rune) bool {
-	if strings.Contains(wanted, string(char)) {
+	if strings.Contains(validLetters, string(char)) {
 		return true
 	}
 	return false
@@ -84,4 +84,17 @@ func Normalize(probs map[string]map[rune]float64) {
 			probs[prefix][next] /= total
 		}
 	}
+}
+
+func IsValidPrefix(prefix string) bool {
+	for _, char := range prefix {
+		if !strings.ContainsRune(validLetters, char) {
+			return false
+		}
+	}
+	return true
+}
+
+func IsValidLetter(letter string) bool {
+	return strings.ContainsRune(validLetters, []rune(letter)[0])
 }

@@ -14,10 +14,10 @@ import (
 	"github.com/PavelDonchenko/mentorship/babyai/pasha/utils"
 )
 
-const numWorkers = 5
+const numWorkers = 1
 
 func main() {
-	// getting book path from terminal
+	//getting book path from terminal
 	var path string
 	fmt.Println("Hello, please provide a path to your text file(can use './pasha/book/text.txt' as default):")
 	_, err := fmt.Scan(&path)
@@ -54,11 +54,13 @@ func main() {
 		now := time.Now()
 
 		// Complete processed logic and return 100 predicted symbols
-		res, err := Complete(path, 1, []rune(start[len(start)-6:]))
+		model, err := BuildPredictions(path, 5)
 		if err != nil {
 			fmt.Println("Error:", err)
 			os.Exit(1)
 		}
+
+		res := Complete(model, start[len(start)-5:], 100)
 		fmt.Println("Time taken:", time.Since(now))
 
 		// print result to terminal
@@ -66,77 +68,41 @@ func main() {
 	}
 }
 
-func Complete(path string, length int, start []rune) ([]rune, error) {
+func BuildPredictions(path string, maxLength int) (map[string]map[rune]float64, error) {
+	wg := sync.WaitGroup{}
+	resultChan := make(chan map[string]map[rune]float64, numWorkers)
+
 	chunks, err := SplitText(path)
 	if err != nil {
 		return nil, err
 	}
 
-	res := start
-
-	for i := 0; i < length; i++ {
-		now := time.Now()
-		appearance, err := CountNextCharAppearance(chunks, start)
-		if err != nil {
-			return nil, err
-		}
-		if len(appearance) == 0 {
-			res = append(res, '?')
-			return res, nil
-		}
-		next := utils.GetNextFromProbabilities(appearance)
-		fmt.Println("ferst next:", string(next))
-
-		res = append(res, next)
-
-		start = res[len(res)-6:]
-		fmt.Println("Time taken:", time.Since(now))
-	}
-
-	return res, nil
-}
-
-func CountNextCharAppearance(chunks []string, start []rune) (map[string]map[rune]float64, error) {
-	wg := sync.WaitGroup{}
-	resultChan := make(chan map[string]map[rune]float64, numWorkers)
-
-	for i := range chunks {
+	for c := range chunks {
 		wg.Add(1)
 
 		go func(wg *sync.WaitGroup, text string, ch chan<- map[string]map[rune]float64) {
 			defer wg.Done()
 
 			nextCharCount := make(map[string]map[rune]float64)
-
-			for j, char := range text {
-				if char == start[len(start)-1] && j > len(start) && j < len([]rune(text)) && utils.IsWanted(rune(text[j+1])) {
-					startLength := 0
-					next := rune(text[j+1])
-					var toSave []rune
-
-					for startLength < len(start) {
-						prevText := rune(text[j-startLength])
-						prevStart := start[len(start)-(1+startLength)]
-
-						if prevText == prevStart {
-							toSave = start[len(start)-(1+startLength):]
-						} else {
-
-							break
+			for i := 0; i < len(text); i++ {
+				for j := 1; j <= maxLength && i+j <= len(text); j++ {
+					prefix := text[i : i+j]
+					if utils.IsValidPrefix(prefix) {
+						if nextCharCount[prefix] == nil {
+							nextCharCount[prefix] = make(map[rune]float64)
 						}
-
-						startLength++
+						if i+j < len(text) {
+							nextLetter := rune(text[i+j])
+							if utils.IsValidLetter(string(nextLetter)) {
+								nextCharCount[prefix][nextLetter]++
+							}
+						}
 					}
-
-					if _, ok := nextCharCount[string(toSave)]; !ok {
-						nextCharCount[string(toSave)] = make(map[rune]float64)
-					}
-					nextCharCount[string(toSave)][next]++
 				}
 			}
 
 			ch <- nextCharCount
-		}(&wg, chunks[i], resultChan)
+		}(&wg, chunks[c], resultChan)
 	}
 
 	go func() {
@@ -157,7 +123,36 @@ func CountNextCharAppearance(chunks []string, start []rune) (map[string]map[rune
 	}
 
 	utils.Normalize(resultCount)
+
 	return resultCount, nil
+}
+
+func Complete(model map[string]map[rune]float64, start string, maxLength int) []rune {
+	res := make([]rune, 0, maxLength)
+	res = append(res, []rune(start)...)
+	word := start
+
+	for i := 0; i < maxLength; i++ {
+		prefix := findPrefix(model, word)
+		nextChar := utils.SelectCharacterWithProbabilities(model[prefix])
+		word = string(word[1:]) + string(nextChar)
+		res = append(res, nextChar)
+	}
+
+	return res
+}
+
+func findPrefix(model map[string]map[rune]float64, start string) string {
+	prefix := ""
+
+	for i := 0; i < len(start); i++ {
+		if _, ok := model[start[i:]]; ok {
+			prefix = start[i:]
+			break
+		}
+	}
+
+	return prefix
 }
 
 func SplitText(path string) ([]string, error) {
