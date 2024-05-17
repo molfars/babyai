@@ -36,7 +36,7 @@ function createDictionary (line, dictionary) {
   return dictionary;
 }
 
-function findMostProbableLetters (letter, dictionary, iterations = 100) {
+function findMostProbableLetters (letter, dictionary, iterations = 200) {
   let currentLetter = letter;
   let mostProbableLetters = [];
 
@@ -53,9 +53,15 @@ function findMostProbableLetters (letter, dictionary, iterations = 100) {
           maxKey = key;
         }
       }
-      mostProbableLetters.push(maxKey)
 
+      if (maxKey === null) {
+        console.log(`No valid next letter found for '${currentLetter}`);
+        break;
+      }
+
+      mostProbableLetters.push(maxKey)
       currentLetter = maxKey;
+
     } else {
       console.log(`No entries found for '${currentLetter}'.`);
       break;
@@ -67,9 +73,8 @@ function findMostProbableLetters (letter, dictionary, iterations = 100) {
 
 try {
   fs.accessSync(filePath, fs.constants.F_OK | fs.constants.R_OK);
-  const fileContent = fs.readFileSync(filePath, 'utf-8');
+  const line = fs.readFileSync(filePath, 'utf-8');
 
-  const line = fileContent;
   createDictionary(line, dictionary);
 
   findMostProbableLetters(letter, dictionary);
