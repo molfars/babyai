@@ -1,6 +1,6 @@
 # Prerequisites
 
-1. You need to install. Check https://go.dev/doc/install for more details. Check by running `go --version` from commandline. 
+1. You need to install. Check https://go.dev/doc/install for more details. Check by running `go version` from command-line. 
 2. (optionaly) Download some text file (around 3-5mb). You can use [Project Gutenberg](https://www.gutenberg.org/)
 
 # Building
